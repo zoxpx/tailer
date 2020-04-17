@@ -1,4 +1,4 @@
-package main
+package tailer
 
 import (
 	"context"
@@ -68,7 +68,7 @@ func (f *fileTailer) loop() error {
 
 		if n, err = fd.Read(buf); err == nil {
 			logrus.Tracef("fileTailer: Read %d bytes", n)
-			os.Stdout.Write(buf[0:n])
+			f.out.Write(buf[0:n])
 			bytesRead += int64(n)
 		} else if err == io.EOF {
 			goto labSleep
@@ -99,20 +99,4 @@ func (f *fileTailer) Stop() {
 
 func (f *fileTailer) IsRunning() bool {
 	return f.isRunning
-}
-
-func main() {
-	// ctx, cancel := context.WithCancel(context.Background())
-	// go func() {
-	// 	time.Sleep(10 * time.Second)
-	// 	cancel()
-	// }()
-
-	logrus.SetLevel(logrus.TraceLevel)
-	ft := NewFileTailer("/tmp/tmp.xx", os.Stderr, nil).Start()
-	go func() {
-		time.Sleep(10 * time.Second)
-		ft.Stop()
-	}()
-	time.Sleep(30 * time.Second)
 }
