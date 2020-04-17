@@ -3,12 +3,13 @@ package tailer
 import (
 	"bytes"
 	"context"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var tmpFileName string
@@ -32,14 +33,14 @@ func TestExplicitStop(t *testing.T) {
 	os.RemoveAll(tmpFileName)
 
 	bb := bytes.Buffer{}
-	tt := NewFileTailer(tmpFileName, &bb, nil)
+	tt := NewFileTailer(nil, tmpFileName, &bb).WithPoll(100 * time.Millisecond)
 	tt.Start()
 
 	f := write(t, nil, "Hello from TestExplicitStop\n")
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(110 * time.Millisecond)
 	f.Write([]byte("wut?"))
 	f.Close()
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(110 * time.Millisecond)
 	tt.Stop()
 
 	assert.Equal(t, "Hello from TestExplicitStop\nwut?", bb.String())
@@ -52,11 +53,11 @@ func TestContextStop(t *testing.T) {
 
 	bb := bytes.Buffer{}
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	tt := NewFileTailer(tmpFileName, &bb, ctx).Start()
+	tt := NewFileTailer(ctx, tmpFileName, &bb).WithPoll(100 * time.Millisecond).Start()
 
 	write(t, nil, "Hello from TestContextStop\n").Close()
 
-	time.Sleep(1500 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 	ctxCancel()
 
 	assert.Equal(t, "Hello from TestContextStop\n", bb.String())
@@ -68,12 +69,12 @@ func TestContextTimeoutStop(t *testing.T) {
 	os.RemoveAll(tmpFileName)
 
 	bb := bytes.Buffer{}
-	ctx, _ := context.WithTimeout(context.Background(), 1500 * time.Millisecond)
-	tt := NewFileTailer(tmpFileName, &bb, ctx).Start()
+	ctx, _ := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	tt := NewFileTailer(ctx, tmpFileName, &bb).WithPoll(100 * time.Millisecond).Start()
 
 	write(t, nil, "Hello from TestContextTimeoutStop\n").Close()
 
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	assert.Equal(t, "Hello from TestContextTimeoutStop\n", bb.String())
 	assert.False(t, tt.IsRunning())

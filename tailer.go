@@ -2,10 +2,11 @@ package tailer
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // FileTailer simple interface to control the tail-follow of the file
@@ -13,6 +14,7 @@ type FileTailer interface {
 	Start() FileTailer
 	Stop()
 	IsRunning() bool
+	WithPoll(time.Duration) FileTailer
 }
 
 type fileTailer struct {
@@ -21,22 +23,29 @@ type fileTailer struct {
 	isRunning bool
 	ctx       context.Context
 	cancel    context.CancelFunc
+	poll      time.Duration
+}
+
+func (f *fileTailer) WithPoll(dur time.Duration) FileTailer {
+	f.poll = dur
+	return f
 }
 
 // NewFileTailer creates a new instance of the FileTailer
-func NewFileTailer(fname string, out io.Writer, ctx context.Context) FileTailer {
-	if out == nil {
-		out = os.Stderr
-	}
+func NewFileTailer(ctx context.Context, fname string, out io.Writer) FileTailer {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	ctx2, cancel := context.WithCancel(ctx)
+	if out == nil {
+		out = os.Stderr
+	}
 	return &fileTailer{
 		fname:  fname,
 		out:    out,
 		ctx:    ctx2,
 		cancel: cancel,
+		poll:   time.Second,
 	}
 }
 
@@ -79,7 +88,7 @@ func (f *fileTailer) loop() error {
 
 	labSleep:
 		select {
-		case <-time.After(time.Second):
+		case <-time.After(f.poll):
 			// nop
 		case <-f.ctx.Done():
 			logrus.Debugf("fileTailer loop done.")
