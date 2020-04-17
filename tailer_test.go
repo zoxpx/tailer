@@ -80,6 +80,21 @@ func TestContextTimeoutStop(t *testing.T) {
 	assert.False(t, tt.IsRunning())
 }
 
+func TestReaderTailer(t *testing.T) {
+	bbI, bbO := bytes.Buffer{}, bytes.Buffer{}
+
+	tt := NewReaderTailer(nil, &bbI, &bbO).WithPoll(100 * time.Millisecond)
+	tt.Start()
+
+	bbI.WriteString("Hello from TestReaderTailer\n")
+	time.Sleep(150 * time.Millisecond)
+
+	tt.Stop()
+	assert.Equal(t, "Hello from TestReaderTailer\n", bbO.String())
+	time.Sleep(50 * time.Millisecond)
+	assert.False(t, tt.IsRunning())
+}
+
 func TestMain(m *testing.M) {
 	tf, err := ioutil.TempFile("", "tailer")
 	if err != nil {
